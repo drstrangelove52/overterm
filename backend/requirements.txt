@@ -1,0 +1,16 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+sqlalchemy[asyncio]==2.0.36
+aiomysql==0.2.0
+pydantic[email]==2.10.3
+pydantic-settings==2.6.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.18
+cryptography==43.0.3
+asyncssh==2.18.0
+slowapi==0.1.9
+httpx==0.28.0
+pyotp==2.9.0
+qrcode==8.0

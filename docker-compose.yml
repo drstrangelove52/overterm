@@ -1,0 +1,65 @@
+name: overterm
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootchangeme}
+      MYSQL_DATABASE: ${DB_NAME:-overterm}
+      MYSQL_USER: ${DB_USER:-overterm}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-changeme}
+    command: >
+      --wait_timeout=28800
+      --interactive_timeout=28800
+      --net_read_timeout=30
+      --net_write_timeout=60
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-}
+    volumes:
+      - ssl_certs:/etc/nginx/ssl
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    depends_on:
+      - backend
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    # Renews every 12 h; exits cleanly if no certs yet or renewal not due
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'
+    profiles:
+      - letsencrypt
+
+volumes:
+  db_data:
+  ssl_certs:
+  certbot_www:
+  certbot_certs:
