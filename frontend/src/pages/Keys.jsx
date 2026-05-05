@@ -3,11 +3,22 @@ import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import Modal from "../components/Modal";
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
 export default function Keys() {
   const { t } = useTranslation();
   const [keys, setKeys] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: "", public_key: "", private_key: "", passphrase: "" });
+  const [privateFile, setPrivateFile] = useState(null);
+  const [publicFile, setPublicFile] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -19,9 +30,14 @@ export default function Keys() {
     setSaving(true);
     setError("");
     try {
-      await api.post("/ssh-keys", form);
+      const payload = { ...form };
+      if (privateFile) payload.private_key = (await readFileAsText(privateFile)).trim();
+      if (publicFile) payload.public_key = (await readFileAsText(publicFile)).trim();
+      await api.post("/ssh-keys", payload);
       setShowModal(false);
       setForm({ name: "", public_key: "", private_key: "", passphrase: "" });
+      setPrivateFile(null);
+      setPublicFile(null);
       load();
     } catch (err) {
       setError(err.response?.data?.detail || t("common.error"));
@@ -85,24 +101,32 @@ export default function Keys() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">{t("keys.publicKeyLabel")}</label>
-              <textarea
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-cyan-500 h-20 resize-none"
-                value={form.public_key}
-                onChange={(e) => setForm({ ...form, public_key: e.target.value })}
-                placeholder={t("keys.publicKeyPlaceholder")}
-                required
-              />
+              <label className="block text-xs text-gray-400 mb-1">{t("keys.privateKeyLabel")}</label>
+              <input type="file" accept=".pem,.key,*"
+                className="w-full text-sm text-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 cursor-pointer"
+                onChange={(e) => setPrivateFile(e.target.files[0] || null)} />
+              {!privateFile && (
+                <textarea
+                  className="w-full mt-2 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-cyan-500 h-24 resize-none"
+                  value={form.private_key}
+                  onChange={(e) => setForm({ ...form, private_key: e.target.value })}
+                  placeholder={t("keys.privateKeyPlaceholder")}
+                />
+              )}
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">{t("keys.privateKeyLabel")}</label>
-              <textarea
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-cyan-500 h-32 resize-none"
-                value={form.private_key}
-                onChange={(e) => setForm({ ...form, private_key: e.target.value })}
-                placeholder={t("keys.privateKeyPlaceholder")}
-                required
-              />
+              <label className="block text-xs text-gray-400 mb-1">{t("keys.publicKeyLabel")}</label>
+              <input type="file" accept=".pub,*"
+                className="w-full text-sm text-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 cursor-pointer"
+                onChange={(e) => setPublicFile(e.target.files[0] || null)} />
+              {!publicFile && (
+                <textarea
+                  className="w-full mt-2 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-cyan-500 h-16 resize-none"
+                  value={form.public_key}
+                  onChange={(e) => setForm({ ...form, public_key: e.target.value })}
+                  placeholder={t("keys.publicKeyPlaceholder")}
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">
