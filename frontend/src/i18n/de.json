@@ -164,6 +164,15 @@
     "passwordPlaceholder": "Leer = unverändert",
     "keyLabel": "SSH-Key",
     "keySelect": "— Key wählen —",
+    "keyModeExisting": "Gespeicherter Key",
+    "keyModeUpload": "Dateien hochladen",
+    "keyUploadName": "Key-Name (optional)",
+    "keyUploadNamePlaceholder": "z.B. mein-server-key",
+    "keyUploadPrivate": "Private-Key-Datei",
+    "keyUploadPublic": "Public-Key-Datei",
+    "keyUploadPassphrase": "Passphrase (leer lassen wenn nicht gesetzt)",
+    "keyUploadPassphrasePlaceholder": "Passphrase des Private Keys",
+    "keyUploadRequired": "Bitte Private- und Public-Key-Datei auswählen.",
     "defaultBadge": "Standard"
   },
   "groups": {

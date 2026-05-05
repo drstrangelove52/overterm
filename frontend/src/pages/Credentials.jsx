@@ -3,6 +3,15 @@ import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import Modal from "../components/Modal";
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
 function CredForm({ title, onClose, onSave, existing, keys, defaultUsername = "" }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({
@@ -11,19 +20,54 @@ function CredForm({ title, onClose, onSave, existing, keys, defaultUsername = ""
     password: "",
     ssh_key_id: existing?.ssh_key_id ?? "",
   });
+  const [keyMode, setKeyMode] = useState("existing"); // "existing" | "upload"
+  const [uploadForm, setUploadForm] = useState({ name: "", passphrase: "", privateFile: null, publicFile: null });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const save = async (e) => {
     e.preventDefault();
-    await onSave({
-      username: form.username || null,
-      auth_method: form.auth_method,
-      password: form.auth_method === "password" ? form.password || null : null,
-      ssh_key_id: form.auth_method === "key" ? Number(form.ssh_key_id) || null : null,
-    });
-    onClose();
+    setError("");
+    setSaving(true);
+    try {
+      let ssh_key_id = form.auth_method === "key" ? Number(form.ssh_key_id) || null : null;
+
+      if (form.auth_method === "key" && keyMode === "upload") {
+        if (!uploadForm.privateFile || !uploadForm.publicFile) {
+          setError(t("credentials.keyUploadRequired"));
+          setSaving(false);
+          return;
+        }
+        const privateKey = await readFileAsText(uploadForm.privateFile);
+        const publicKey = await readFileAsText(uploadForm.publicFile);
+        const keyName = uploadForm.name.trim() || uploadForm.privateFile.name;
+        const res = await api.post("/ssh-keys", {
+          name: keyName,
+          private_key: privateKey.trim(),
+          public_key: publicKey.trim(),
+          passphrase: uploadForm.passphrase || null,
+        });
+        ssh_key_id = res.data.id;
+      }
+
+      await onSave({
+        username: form.username || null,
+        auth_method: form.auth_method,
+        password: form.auth_method === "password" ? form.password || null : null,
+        ssh_key_id,
+      });
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || t("common.error"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inp = "w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-cyan-500";
+  const tabBtn = (mode) =>
+    `flex-1 py-1.5 text-xs rounded transition-colors ${keyMode === mode ? "bg-cyan-700 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`;
+
   return (
     <Modal title={title} onClose={onClose}>
       <form onSubmit={save} className="space-y-3">
@@ -48,16 +92,59 @@ function CredForm({ title, onClose, onSave, existing, keys, defaultUsername = ""
               placeholder={t("credentials.passwordPlaceholder")} />
           </div>
         ) : (
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">{t("credentials.keyLabel")}</label>
-            <select className={inp} value={form.ssh_key_id} onChange={(e) => setForm({ ...form, ssh_key_id: e.target.value })}>
-              <option value="">{t("credentials.keySelect")}</option>
-              {keys.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
-            </select>
+          <div className="space-y-3">
+            <div className="flex gap-1">
+              <button type="button" className={tabBtn("existing")} onClick={() => setKeyMode("existing")}>
+                {t("credentials.keyModeExisting")}
+              </button>
+              <button type="button" className={tabBtn("upload")} onClick={() => setKeyMode("upload")}>
+                {t("credentials.keyModeUpload")}
+              </button>
+            </div>
+
+            {keyMode === "existing" ? (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">{t("credentials.keyLabel")}</label>
+                <select className={inp} value={form.ssh_key_id} onChange={(e) => setForm({ ...form, ssh_key_id: e.target.value })}>
+                  <option value="">{t("credentials.keySelect")}</option>
+                  {keys.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("credentials.keyUploadName")}</label>
+                  <input className={inp} value={uploadForm.name}
+                    onChange={(e) => setUploadForm({ ...uploadForm, name: e.target.value })}
+                    placeholder={t("credentials.keyUploadNamePlaceholder")} />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("credentials.keyUploadPrivate")}</label>
+                  <input type="file" accept=".pem,.key,*"
+                    className="w-full text-sm text-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 cursor-pointer"
+                    onChange={(e) => setUploadForm({ ...uploadForm, privateFile: e.target.files[0] || null })} />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("credentials.keyUploadPublic")}</label>
+                  <input type="file" accept=".pub,*"
+                    className="w-full text-sm text-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 cursor-pointer"
+                    onChange={(e) => setUploadForm({ ...uploadForm, publicFile: e.target.files[0] || null })} />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("credentials.keyUploadPassphrase")}</label>
+                  <input type="password" className={inp} value={uploadForm.passphrase}
+                    onChange={(e) => setUploadForm({ ...uploadForm, passphrase: e.target.value })}
+                    placeholder={t("credentials.keyUploadPassphrasePlaceholder")} />
+                </div>
+              </div>
+            )}
           </div>
         )}
+        {error && <p className="text-red-400 text-xs">{error}</p>}
         <div className="flex gap-3 pt-1">
-          <button type="submit" className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-medium transition-colors">{t("common.save")}</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 rounded text-sm font-medium transition-colors">
+            {saving ? "..." : t("common.save")}
+          </button>
           <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm transition-colors">{t("common.cancel")}</button>
         </div>
       </form>

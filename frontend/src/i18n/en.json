@@ -164,6 +164,15 @@
     "passwordPlaceholder": "Empty = unchanged",
     "keyLabel": "SSH Key",
     "keySelect": "— Select key —",
+    "keyModeExisting": "Saved key",
+    "keyModeUpload": "Upload files",
+    "keyUploadName": "Key name (optional)",
+    "keyUploadNamePlaceholder": "e.g. my-server-key",
+    "keyUploadPrivate": "Private key file",
+    "keyUploadPublic": "Public key file",
+    "keyUploadPassphrase": "Passphrase (leave empty if not set)",
+    "keyUploadPassphrasePlaceholder": "Private key passphrase",
+    "keyUploadRequired": "Please select both a private and public key file.",
     "defaultBadge": "Default"
   },
   "groups": {
