@@ -60,11 +60,17 @@ async def _run_migrations():
             "ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "
             "sync_interval_minutes INTEGER DEFAULT 360"
         ))
-        # Migrate existing hours value to minutes (only if still default 6h or unset)
-        await conn.execute(text(
-            "UPDATE app_settings SET sync_interval_minutes = sync_interval_hours * 60 "
-            "WHERE sync_interval_minutes = 360 AND sync_interval_hours != 6"
+        # Migrate existing hours value to minutes — only runs if the old column exists
+        col_exists = await conn.execute(text(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'app_settings' "
+            "AND COLUMN_NAME = 'sync_interval_hours'"
         ))
+        if col_exists.scalar():
+            await conn.execute(text(
+                "UPDATE app_settings SET sync_interval_minutes = sync_interval_hours * 60 "
+                "WHERE sync_interval_minutes = 360 AND sync_interval_hours != 6"
+            ))
         await conn.execute(text(
             "ALTER TABLE hosts ADD COLUMN IF NOT EXISTS use_tmux BOOLEAN NOT NULL DEFAULT 0"
         ))
