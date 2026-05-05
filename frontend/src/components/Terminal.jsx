@@ -180,7 +180,6 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       fontSize: 14,
       scrollback: 5000,
       cursorBlink: true,
-      copyOnSelect: true,
     });
     const fit = new FitAddon();
     const search = new SearchAddon();
@@ -199,6 +198,12 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       term.scrollLines(e.deltaY > 0 ? 5 : -5);
     };
     term.element.addEventListener("wheel", handleWheel, { passive: false });
+
+    // Copy selected text to clipboard on selection change (PuTTY-style)
+    term.onSelectionChange(() => {
+      const sel = term.getSelection();
+      if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+    });
 
     // PuTTY-style right-click pastes from clipboard
     const handleContextMenu = (e) => {
