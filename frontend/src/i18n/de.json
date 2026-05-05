@@ -173,6 +173,7 @@
     "keyUploadPassphrase": "Passphrase (leer lassen wenn nicht gesetzt)",
     "keyUploadPassphrasePlaceholder": "Passphrase des Private Keys",
     "keyUploadRequired": "Bitte Private- und Public-Key-Datei auswählen.",
+    "viaGroup": "via Gruppe: {{group}}",
     "defaultBadge": "Standard"
   },
   "groups": {

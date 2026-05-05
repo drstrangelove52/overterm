@@ -180,6 +180,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       fontSize: 14,
       scrollback: 5000,
       cursorBlink: true,
+      copyOnSelect: true,
     });
     const fit = new FitAddon();
     const search = new SearchAddon();
@@ -198,6 +199,16 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       term.scrollLines(e.deltaY > 0 ? 5 : -5);
     };
     term.element.addEventListener("wheel", handleWheel, { passive: false });
+
+    // PuTTY-style right-click pastes from clipboard
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      navigator.clipboard.readText().then((text) => {
+        if (text && wsRef.current?.readyState === WebSocket.OPEN)
+          wsRef.current.send(JSON.stringify({ type: "input", data: text }));
+      }).catch(() => {});
+    };
+    term.element.addEventListener("contextmenu", handleContextMenu);
 
     term.attachCustomKeyEventHandler((ev) => {
       if (ev.type !== "keydown") return true;
@@ -342,6 +353,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       resizeObserver.disconnect();
       window.visualViewport?.removeEventListener("resize", doResize);
       term.element?.removeEventListener("wheel", handleWheel);
+      term.element?.removeEventListener("contextmenu", handleContextMenu);
       wsRef.current?.close();
       term.dispose();
     };

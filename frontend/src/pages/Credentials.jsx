@@ -193,6 +193,13 @@ export default function Credentials() {
 
   const credForHost = (hostId) => creds.find((c) => c.host_id === hostId);
   const credForGroup = (groupId) => groupCreds.find((c) => c.group_id === groupId);
+  const groupCredForHost = (host) => {
+    for (const g of host.groups ?? []) {
+      const gc = credForGroup(g.id);
+      if (gc) return { cred: gc, groupName: g.name };
+    }
+    return null;
+  };
 
   const saveHostCred = async (hostId, data) => {
     await api.put("/credentials", { host_id: hostId, ...data });
@@ -340,7 +347,14 @@ export default function Credentials() {
                         <span className="text-xs text-gray-500 font-mono">{host.hostname}</span>
                       </td>
                       <td className={tdCls}>
-                        <CredBadge cred={cred} keys={keys} />
+                        {cred ? (
+                          <CredBadge cred={cred} keys={keys} />
+                        ) : (() => {
+                          const gc = groupCredForHost(host);
+                          return gc
+                            ? <span className="text-xs text-gray-500">{t("credentials.viaGroup", { group: gc.groupName })}</span>
+                            : <span className="text-gray-700 text-xs">—</span>;
+                        })()}
                       </td>
                       <td className={tdCls + " text-right"}>
                         <div className="flex gap-2 justify-end">
