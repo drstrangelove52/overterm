@@ -179,6 +179,11 @@ export default function Proxmox() {
     load();
   };
 
+  const cloneSource = async (s) => {
+    await api.post(`/proxmox/${s.id}/clone`);
+    load();
+  };
+
   const syncSource = async (s) => {
     setSyncing((p) => ({ ...p, [s.id]: true }));
     setSyncResults((p) => ({ ...p, [s.id]: null }));
@@ -283,6 +288,10 @@ export default function Proxmox() {
                         <button onClick={() => setEditSource(s)}
                           className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded transition-colors">
                           ✏
+                        </button>
+                        <button onClick={() => cloneSource(s)} title={t('proxmox.clone')}
+                          className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded transition-colors">
+                          ⧉
                         </button>
                         <button onClick={() => deleteSource(s)}
                           className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-red-900 text-red-400 rounded transition-colors">

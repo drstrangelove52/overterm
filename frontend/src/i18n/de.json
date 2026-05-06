@@ -266,7 +266,8 @@
     "inactiveHosts": "Inaktive Hosts (ausgeschaltet)",
     "inactiveHostsNone": "Keine inaktiven Hosts.",
     "inactiveHostDeleteConfirm": "Host \"{{name}}\" dauerhaft löschen?",
-    "syncDeactivated": "{{count}} deaktiviert"
+    "syncDeactivated": "{{count}} deaktiviert",
+    "clone": "Klonen"
   },
   "profile": {
     "title": "Profil",

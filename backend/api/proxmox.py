@@ -138,6 +138,31 @@ async def delete_source(source_id: int, db: AsyncSession = Depends(get_db), _=De
     await db.commit()
 
 
+@router.post("/{source_id}/clone", response_model=ProxmoxSourceOut, status_code=201)
+async def clone_source(source_id: int, db: AsyncSession = Depends(get_db), _=Depends(require_admin)):
+    result = await db.execute(select(ProxmoxSource).where(ProxmoxSource.id == source_id))
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+    clone = ProxmoxSource(
+        name=f"{source.name} (Copy)",
+        url=source.url,
+        api_token_encrypted=source.api_token_encrypted,
+        verify_ssl=source.verify_ssl,
+        import_qemu=source.import_qemu,
+        import_lxc=source.import_lxc,
+        only_running=source.only_running,
+        label_filter=source.label_filter,
+        target_group_id=source.target_group_id,
+        default_ssh_port=source.default_ssh_port,
+        default_ssh_user=source.default_ssh_user,
+    )
+    db.add(clone)
+    await db.commit()
+    await db.refresh(clone)
+    return _out(clone)
+
+
 @router.get("/{source_id}/inactive-hosts", response_model=list[HostOut])
 async def list_inactive_hosts(
     source_id: int,
