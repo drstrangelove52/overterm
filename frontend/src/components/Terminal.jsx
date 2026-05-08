@@ -45,11 +45,32 @@ function MobileToolbar({ wsRef, broadcastInputRef, termRef }) {
   return (
     <div className="shrink-0 flex items-center overflow-x-auto bg-gray-900 border-t border-gray-700 px-1 py-1 gap-1 select-none">
       <button
-        onPointerDown={(e) => { e.preventDefault(); termRef?.current?.scrollLines(-5); }}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          const term = termRef?.current;
+          if (!term) return;
+          if (term.buffer?.active?.type === "alternate") {
+            // In tmux/full-screen app: Ctrl+B + PageUp enters copy-mode and scrolls up
+            if (wsRef.current?.readyState === WebSocket.OPEN)
+              wsRef.current.send(JSON.stringify({ type: "input", data: "\x02\x1b[5~" }));
+          } else {
+            term.scrollLines(-5);
+          }
+        }}
         className="text-xs px-2.5 py-2 rounded bg-gray-800 text-gray-300 active:bg-gray-600 shrink-0"
       >↑↑</button>
       <button
-        onPointerDown={(e) => { e.preventDefault(); termRef?.current?.scrollLines(5); }}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          const term = termRef?.current;
+          if (!term) return;
+          if (term.buffer?.active?.type === "alternate") {
+            if (wsRef.current?.readyState === WebSocket.OPEN)
+              wsRef.current.send(JSON.stringify({ type: "input", data: "\x02\x1b[6~" }));
+          } else {
+            term.scrollLines(5);
+          }
+        }}
         className="text-xs px-2.5 py-2 rounded bg-gray-800 text-gray-300 active:bg-gray-600 shrink-0"
       >↓↓</button>
       <div className="w-px h-5 bg-gray-700 shrink-0 mx-0.5" />
