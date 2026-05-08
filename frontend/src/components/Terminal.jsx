@@ -30,7 +30,7 @@ const CTRL_KEYS = ["C","D","Z","L","W","A","E","R","U","K"].map((k) => ({
   data: String.fromCharCode(k.charCodeAt(0) - 64),
 }));
 
-function MobileToolbar({ wsRef, broadcastInputRef }) {
+function MobileToolbar({ wsRef, broadcastInputRef, termRef }) {
   const [ctrlActive, setCtrlActive] = useState(false);
 
   const send = (data) => {
@@ -44,6 +44,15 @@ function MobileToolbar({ wsRef, broadcastInputRef }) {
 
   return (
     <div className="shrink-0 flex items-center overflow-x-auto bg-gray-900 border-t border-gray-700 px-1 py-1 gap-1 select-none">
+      <button
+        onPointerDown={(e) => { e.preventDefault(); termRef?.current?.scrollLines(-5); }}
+        className="text-xs px-2.5 py-2 rounded bg-gray-800 text-gray-300 active:bg-gray-600 shrink-0"
+      >↑↑</button>
+      <button
+        onPointerDown={(e) => { e.preventDefault(); termRef?.current?.scrollLines(5); }}
+        className="text-xs px-2.5 py-2 rounded bg-gray-800 text-gray-300 active:bg-gray-600 shrink-0"
+      >↓↓</button>
+      <div className="w-px h-5 bg-gray-700 shrink-0 mx-0.5" />
       {ctrlActive && (
         <button
           onPointerDown={(e) => { e.preventDefault(); setCtrlActive(false); }}
@@ -129,6 +138,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
   const wsRef = useRef(null);
   const connectRef = useRef(null);
   const searchAddonRef = useRef(null);
+  const termRef = useRef(null);
   const inactivityTimerRef = useRef(null);
   const broadcastInputRef = useRef(onBroadcastInput);
   useEffect(() => { broadcastInputRef.current = onBroadcastInput; }, [onBroadcastInput]);
@@ -188,6 +198,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
     term.loadAddon(search);
     term.loadAddon(new WebLinksAddon());
     term.open(containerRef.current);
+    termRef.current = term;
     fit.fit();
     term.focus();
 
@@ -403,7 +414,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
         className="flex-1 overflow-hidden"
         onClick={() => { if (isMobile) containerRef.current?.querySelector("textarea,canvas")?.focus(); }}
       />
-      {isMobile && <MobileToolbar wsRef={wsRef} broadcastInputRef={broadcastInputRef} />}
+      {isMobile && <MobileToolbar wsRef={wsRef} broadcastInputRef={broadcastInputRef} termRef={termRef} />}
 
       {searchOpen && (
         <div className="absolute top-10 right-4 z-20 flex items-center gap-1 bg-gray-900 border border-gray-700 rounded shadow-lg px-2 py-1.5">
