@@ -1,4 +1,6 @@
 import asyncio
+import time
+import resource as _resource
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,6 +9,9 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from passlib.context import CryptContext
 from sqlalchemy import select
+
+_START_TIME = time.monotonic()
+_APP_VERSION = "1.0.9"
 
 from core.config import settings
 from models.database import engine, AsyncSessionLocal, Base
@@ -158,4 +163,32 @@ app.include_router(quick_commands_router, prefix="/api")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    from sqlalchemy import text
+    from core import session_manager
+
+    db_ok = False
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        pass
+
+    sessions = list(session_manager._sessions.values())
+    active_ws = sum(1 for s in sessions if s.is_ws_connected)
+    lingering = sum(1 for s in sessions if not s.is_ws_connected)
+
+    mem_kb = _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss
+    mem_mb = round(mem_kb / 1024, 1)
+
+    uptime_s = int(time.monotonic() - _START_TIME)
+
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "version": _APP_VERSION,
+        "db": "ok" if db_ok else "error",
+        "active_sessions": active_ws,
+        "lingering_sessions": lingering,
+        "memory_mb": mem_mb,
+        "uptime_seconds": uptime_s,
+    }

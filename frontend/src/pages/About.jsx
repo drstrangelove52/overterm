@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
+import api from "../api/client";
 
 const APP_VERSION = "1.0.9";
 
@@ -507,6 +508,139 @@ function DocsTabEn() {
   );
 }
 
+// ── Status tab ────────────────────────────────────────────────────────────────
+
+function formatUptime(seconds, t) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (d > 0) return `${d}${t("about.status.days")} ${h}${t("about.status.hours")} ${m}${t("about.status.minutes")}`;
+  if (h > 0) return `${h}${t("about.status.hours")} ${m}${t("about.status.minutes")}`;
+  if (m > 0) return `${m}${t("about.status.minutes")} ${s}${t("about.status.seconds")}`;
+  return `${s}${t("about.status.seconds")}`;
+}
+
+function StatusRow({ label, children }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0">
+      <span className="text-gray-400 text-sm">{label}</span>
+      <span className="text-sm font-medium">{children}</span>
+    </div>
+  );
+}
+
+function StatusTab() {
+  const { t } = useTranslation();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
+  const [lastChecked, setLastChecked] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetch = useCallback(() => {
+    setLoading(true);
+    api.get("/health", { baseURL: "/" })
+      .then((r) => {
+        setData(r.data);
+        setError(false);
+        setLastChecked(new Date());
+      })
+      .catch(() => {
+        setData(null);
+        setError(true);
+        setLastChecked(new Date());
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetch();
+    const id = setInterval(fetch, 30_000);
+    return () => clearInterval(id);
+  }, [fetch]);
+
+  const overall = error ? "offline" : data?.status ?? "checking";
+
+  const statusColor = {
+    ok: "bg-green-500",
+    degraded: "bg-yellow-500",
+    offline: "bg-red-500",
+    checking: "bg-gray-500",
+  }[overall] ?? "bg-gray-500";
+
+  const statusLabel = {
+    ok: t("about.status.ok"),
+    degraded: t("about.status.degraded"),
+    offline: t("about.status.offline"),
+    checking: t("about.status.checking"),
+  }[overall] ?? t("about.status.checking");
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+        <div className="flex items-center gap-3 mb-1">
+          <span className={`w-3 h-3 rounded-full shrink-0 ${statusColor} ${overall === "checking" ? "animate-pulse" : ""}`} />
+          <span className="text-white font-semibold text-lg">OverTerm</span>
+        </div>
+        <p className={`text-sm ml-6 font-medium ${
+          overall === "ok" ? "text-green-400" :
+          overall === "degraded" ? "text-yellow-400" :
+          overall === "offline" ? "text-red-400" : "text-gray-400"
+        }`}>{statusLabel}</p>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-lg px-5">
+        <StatusRow label={t("about.status.database")}>
+          {!data ? (
+            <span className="text-gray-500">—</span>
+          ) : data.db === "ok" ? (
+            <span className="text-green-400">✓ ok</span>
+          ) : (
+            <span className="text-red-400">✗ error</span>
+          )}
+        </StatusRow>
+
+        <StatusRow label={t("about.status.activeSessions")}>
+          <span className="text-white">{data != null ? data.active_sessions : "—"}</span>
+        </StatusRow>
+
+        <StatusRow label={t("about.status.lingeringSessions")}>
+          <span className="text-gray-300" title={t("about.status.lingeringHint")}>
+            {data != null ? data.lingering_sessions : "—"}
+          </span>
+        </StatusRow>
+
+        <StatusRow label={t("about.status.memory")}>
+          <span className="text-white">{data != null ? `${data.memory_mb} MB` : "—"}</span>
+        </StatusRow>
+
+        <StatusRow label={t("about.status.uptime")}>
+          <span className="text-white">{data != null ? formatUptime(data.uptime_seconds, t) : "—"}</span>
+        </StatusRow>
+
+        <StatusRow label={t("about.status.version")}>
+          <span className="text-gray-300 font-mono text-xs">v{data?.version ?? APP_VERSION}</span>
+        </StatusRow>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-gray-600">
+        <span>
+          {lastChecked
+            ? `${t("about.status.lastChecked")}: ${lastChecked.toLocaleTimeString()}`
+            : t("about.status.checking")}
+        </span>
+        <button
+          onClick={fetch}
+          disabled={loading}
+          className="text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40"
+        >
+          {loading ? "…" : t("about.status.refresh")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function About() {
@@ -515,6 +649,7 @@ export default function About() {
 
   const TABS = [
     { key: "docs", label: t("about.docsTab") },
+    { key: "status", label: t("about.statusTab") },
     { key: "info", label: t("about.infoTab") },
   ];
 
@@ -536,6 +671,7 @@ export default function About() {
         ))}
       </div>
       {tab === "docs" && (i18n.language === "en" ? <DocsTabEn /> : <DocsTabDe />)}
+      {tab === "status" && <StatusTab />}
       {tab === "info" && <InfoTab />}
     </div>
   );
