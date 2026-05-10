@@ -223,11 +223,19 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
     fit.fit();
     term.focus();
 
-    // Shift+Wheel always scrolls the viewport, even when an app has mouse tracking active
+    const tmuxScroll = (up) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN)
+        wsRef.current.send(JSON.stringify({ type: "input", data: up ? "\x02\x1b[5~" : "\x02\x1b[6~" }));
+    };
+
+    const isAltScreen = () => term.buffer?.active?.type === "alternate";
+
+    // Shift+Wheel scrolls viewport or triggers tmux copy-mode scroll
     const handleWheel = (e) => {
       if (!e.shiftKey) return;
       e.preventDefault();
-      term.scrollLines(e.deltaY > 0 ? 5 : -5);
+      if (isAltScreen()) tmuxScroll(e.deltaY < 0);
+      else term.scrollLines(e.deltaY > 0 ? 5 : -5);
     };
     term.element.addEventListener("wheel", handleWheel, { passive: false });
 
@@ -251,9 +259,9 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       if (ev.type !== "keydown") return true;
       if (ev.key === "f" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); setSearchOpen((o) => !o); return false; }
       if (ev.key === "Escape") { setSearchOpen(false); return true; }
-      // Shift+PageUp/Down always scrolls the viewport regardless of app mode
-      if (ev.key === "PageUp" && ev.shiftKey) { ev.preventDefault(); term.scrollPages(-1); return false; }
-      if (ev.key === "PageDown" && ev.shiftKey) { ev.preventDefault(); term.scrollPages(1); return false; }
+      // Shift+PageUp/Down scrolls viewport or triggers tmux copy-mode scroll
+      if (ev.key === "PageUp" && ev.shiftKey) { ev.preventDefault(); if (isAltScreen()) tmuxScroll(true); else term.scrollPages(-1); return false; }
+      if (ev.key === "PageDown" && ev.shiftKey) { ev.preventDefault(); if (isAltScreen()) tmuxScroll(false); else term.scrollPages(1); return false; }
       if (!/^F([1-9]|1[0-2])$/.test(ev.key)) return true;
       const hotkey = ev.shiftKey ? `Shift+${ev.key}` : ev.key;
       const cmd = quickCommandsRef.current.find((c) => c.hotkey === hotkey);
