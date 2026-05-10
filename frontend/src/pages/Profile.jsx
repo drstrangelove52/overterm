@@ -531,12 +531,16 @@ export default function Profile() {
   if (!user) return null;
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-6">
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
       <h1 className="text-xl font-bold text-white">{t("profile.title")}</h1>
-      <AccountSection user={user} onUpdated={handleUpdated} />
-      <PasswordSection />
-      <TwoFactorSection enabled={user.totp_enabled ?? false} />
-      <LanguageSection user={user} onUpdated={handleUpdated} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <AccountSection user={user} onUpdated={handleUpdated} />
+        <PasswordSection />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <LanguageSection user={user} onUpdated={handleUpdated} />
+        <TwoFactorSection enabled={user.totp_enabled ?? false} />
+      </div>
       <QuickCommandsSection />
     </div>
   );
