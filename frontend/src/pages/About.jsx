@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 
-const APP_VERSION = "1.0.6";
+const APP_VERSION = "1.0.7";
 
 const FRONTEND = [
   { name: "React",               version: "18.3",  license: "MIT",                        roleKey: "about.roles.uiFramework" },

@@ -228,7 +228,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
         wsRef.current.send(JSON.stringify({ type: "input", data: up ? "\x02\x1b[5~" : "\x02\x1b[6~" }));
     };
 
-    const isAltScreen = () => term.buffer?.active?.type === "alternate";
+    const isAltScreen = () => term.buffer?.active === term.buffer?.alternate;
 
     // Shift+Wheel scrolls viewport or triggers tmux copy-mode scroll
     const handleWheel = (e) => {
