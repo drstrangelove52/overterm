@@ -172,6 +172,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
   const searchInputRef = useRef(null);
   const [disconnected, setDisconnected] = useState(false);
   const [activeTmuxName, setActiveTmuxName] = useState(initialTmuxName || null);
+  const sessionKeyRef = useRef(initialSessionKey);
 
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 50);
@@ -356,6 +357,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
           if (shouldScroll) term.scrollToBottom();
           else scheduleScroll();
         } else if (msg.type === "session_key") {
+          sessionKeyRef.current = msg.key;
           if (msg.tmux_name) { tmuxNameRef.current = msg.tmux_name; setActiveTmuxName(msg.tmux_name); }
           onSessionKey?.(msg.key, msg.tmux_name || null);
           if (!resumeKey && !tmuxResume && initialCommand)
@@ -472,7 +474,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
             <p className="text-gray-300 text-sm">{t("terminal.disconnectedTitle")}</p>
             <div className="flex gap-3">
               <button
-                onClick={() => connectRef.current?.()}
+                onClick={() => connectRef.current?.(sessionKeyRef.current)}
                 className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-sm font-medium transition-colors"
               >
                 {t("terminal.reconnect")}
