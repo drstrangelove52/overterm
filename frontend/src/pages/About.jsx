@@ -536,7 +536,7 @@ function StatusTab() {
   const [lastChecked, setLastChecked] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const fetch = useCallback(() => {
+  const loadStatus = useCallback(() => {
     setLoading(true);
     fetch("/health")
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
@@ -546,10 +546,10 @@ function StatusTab() {
   }, []);
 
   useEffect(() => {
-    fetch();
-    const id = setInterval(fetch, 30_000);
+    loadStatus();
+    const id = setInterval(loadStatus, 30_000);
     return () => clearInterval(id);
-  }, [fetch]);
+  }, [loadStatus]);
 
   const overall = error ? "offline" : data?.status ?? "checking";
 
@@ -622,7 +622,7 @@ function StatusTab() {
             : t("about.status.checking")}
         </span>
         <button
-          onClick={fetch}
+          onClick={loadStatus}
           disabled={loading}
           className="text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40"
         >
