@@ -30,7 +30,7 @@
     "hosts": "Hosts",
     "keys": "SSH Keys",
     "credentials": "Meine Zugangsdaten",
-    "activeSessions": "Aktive Sessions",
+    "activeSessions": "Aktive tmux Sessions",
     "admin": "Admin",
     "info": "Info",
     "profile": "Profil",
@@ -366,7 +366,7 @@
     "settingsError": "Fehler beim Speichern"
   },
   "activeSessions": {
-    "title": "Aktive Sessions",
+    "title": "Aktive tmux Sessions",
     "subtitle": "Alle laufenden tmux-Sessions aller Benutzer",
     "connected": "{{count}} verbunden",
     "detached": "{{count}} detached",
