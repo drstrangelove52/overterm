@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
-import api from "../api/client";
 
 const APP_VERSION = "1.0.9";
 
@@ -539,17 +538,10 @@ function StatusTab() {
 
   const fetch = useCallback(() => {
     setLoading(true);
-    api.get("/health", { baseURL: "/" })
-      .then((r) => {
-        setData(r.data);
-        setError(false);
-        setLastChecked(new Date());
-      })
-      .catch(() => {
-        setData(null);
-        setError(true);
-        setLastChecked(new Date());
-      })
+    fetch("/health")
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then((d) => { setData(d); setError(false); setLastChecked(new Date()); })
+      .catch(() => { setData(null); setError(true); setLastChecked(new Date()); })
       .finally(() => setLoading(false));
   }, []);
 
