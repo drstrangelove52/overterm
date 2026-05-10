@@ -207,6 +207,46 @@ function DocsTabDe() {
         <DocItem label="Nach Server-Neustart">tmux-Sessions überleben keinen Neustart des Zielservers. Nach einem Neustart werden alle laufenden Sessions automatisch aus der Seitenleiste entfernt.</DocItem>
       </DocSection>
 
+      <DocSection title="Scrollen im Terminal">
+        <p>Das Scrollverhalten hängt davon ab, ob im Terminal ein Vollbildprogramm läuft (z.B. tmux, vim, Claude Code) oder eine normale Shell.</p>
+
+        <DocItem label="Normale Shell (kein Vollbildprogramm)">
+          Das Terminal hat einen eigenen Scroll-Puffer (Scrollback). Scrollen funktioniert direkt:
+          <ul className="mt-1 space-y-0.5 ml-4 list-none">
+            <li>PC: Mausrad — scrollt den Verlauf hoch/runter</li>
+            <li>PC: <Kbd>Shift</Kbd>+Mausrad — scrollt ebenfalls (auch wenn die Maus gerade über einem anderen Element ist)</li>
+            <li>PC: <Kbd>Shift</Kbd>+<Kbd>PageUp</Kbd> / <Kbd>Shift</Kbd>+<Kbd>PageDown</Kbd> — seitenweises Scrollen</li>
+            <li>Tablet/Mobile: ↑↑ / ↓↓ Buttons in der Toolbar</li>
+          </ul>
+        </DocItem>
+
+        <DocItem label="tmux-Session (oder anderes Vollbildprogramm)">
+          Vollbildprogramme wie tmux, vim oder Claude Code übernehmen den Bildschirm vollständig (Alternate Screen). Der xterm.js-Scrollback ist dabei inaktiv — stattdessen muss tmux's eingebauter Copy Mode verwendet werden:
+          <ul className="mt-1 space-y-1 ml-4 list-none mt-2">
+            <li><span className="text-white font-medium">PC:</span> <Kbd>Shift</Kbd>+Mausrad hoch → aktiviert tmux Copy Mode und scrollt eine Seite hoch</li>
+            <li><span className="text-white font-medium">PC:</span> <Kbd>Shift</Kbd>+<Kbd>PageUp</Kbd> → aktiviert tmux Copy Mode und scrollt hoch</li>
+            <li><span className="text-white font-medium">Tablet/Mobile:</span> ↑↑-Button in der Toolbar → aktiviert tmux Copy Mode und scrollt hoch</li>
+          </ul>
+        </DocItem>
+
+        <DocItem label="Im tmux Copy Mode">
+          Sobald der Copy Mode aktiv ist (Statusleiste zeigt <code className="text-cyan-400 font-mono text-xs">[copy]</code>):
+          <ul className="mt-1 space-y-0.5 ml-4 list-none">
+            <li><Kbd>↑</Kbd> / <Kbd>↓</Kbd> — zeilenweise scrollen</li>
+            <li><Kbd>PageUp</Kbd> / <Kbd>PageDown</Kbd> — seitenweise scrollen</li>
+            <li><Kbd>Shift</Kbd>+Mausrad — weitere Seiten scrollen (sendet erneut <Kbd>PageUp</Kbd>/<Kbd>PageDown</Kbd>)</li>
+            <li><Kbd>q</Kbd> — Copy Mode beenden, zurück zur normalen Eingabe</li>
+          </ul>
+        </DocItem>
+
+        <DocItem label="Copy & Paste (PuTTY-Stil)">
+          <ul className="mt-1 space-y-0.5 ml-4 list-none">
+            <li>Text markieren → wird automatisch in die Zwischenablage kopiert</li>
+            <li>Rechtsklick im Terminal → fügt den Inhalt der Zwischenablage ein</li>
+          </ul>
+        </DocItem>
+      </DocSection>
+
       <DocSection title="SFTP-Dateibrowser">
         <DocItem label="SFTP starten">Auf der Host-Liste «SFTP» klicken. Der Dateibrowser öffnet sich als Tab.</DocItem>
         <DocItem label="Navigation">Verzeichnisse durch Klick öffnen, mit dem Pfad oben navigieren.</DocItem>
@@ -333,6 +373,46 @@ function DocsTabEn() {
         <DocItem label="Shared sessions">Multiple users can connect to the same tmux session simultaneously and share the same shell. Each sees their own full-size display area (no rendering artifacts from different window sizes).</DocItem>
         <DocItem label="End session">✕ in the sidebar ends the session completely (tmux kill + entry removed). <Kbd>exit</Kbd> in the terminal ends the shell and thus the tmux session. <Kbd>Ctrl</Kbd>+<Kbd>B</Kbd> then <Kbd>D</Kbd> only detaches the client — the session continues and reappears in the sidebar.</DocItem>
         <DocItem label="After server restart">tmux sessions do not survive a restart of the target server. After a restart, all running sessions are automatically removed from the sidebar.</DocItem>
+      </DocSection>
+
+      <DocSection title="Scrolling in the Terminal">
+        <p>Scroll behaviour depends on whether a full-screen application is running (e.g. tmux, vim, Claude Code) or a regular shell.</p>
+
+        <DocItem label="Regular shell (no full-screen app)">
+          The terminal has its own scrollback buffer. Scrolling works directly:
+          <ul className="mt-1 space-y-0.5 ml-4 list-none">
+            <li>PC: Mouse wheel — scrolls the history up/down</li>
+            <li>PC: <Kbd>Shift</Kbd>+Mouse wheel — also scrolls (even if the mouse is over another element)</li>
+            <li>PC: <Kbd>Shift</Kbd>+<Kbd>PageUp</Kbd> / <Kbd>Shift</Kbd>+<Kbd>PageDown</Kbd> — page-by-page scrolling</li>
+            <li>Tablet/Mobile: ↑↑ / ↓↓ buttons in the toolbar</li>
+          </ul>
+        </DocItem>
+
+        <DocItem label="tmux session (or other full-screen program)">
+          Full-screen programs like tmux, vim or Claude Code take over the screen completely (alternate screen). The xterm.js scrollback is inactive in this mode — tmux's built-in copy mode must be used instead:
+          <ul className="mt-1 space-y-1 ml-4 list-none mt-2">
+            <li><span className="text-white font-medium">PC:</span> <Kbd>Shift</Kbd>+Mouse wheel up → activates tmux copy mode and scrolls up one page</li>
+            <li><span className="text-white font-medium">PC:</span> <Kbd>Shift</Kbd>+<Kbd>PageUp</Kbd> → activates tmux copy mode and scrolls up</li>
+            <li><span className="text-white font-medium">Tablet/Mobile:</span> ↑↑ button in toolbar → activates tmux copy mode and scrolls up</li>
+          </ul>
+        </DocItem>
+
+        <DocItem label="In tmux copy mode">
+          Once copy mode is active (status bar shows <code className="text-cyan-400 font-mono text-xs">[copy]</code>):
+          <ul className="mt-1 space-y-0.5 ml-4 list-none">
+            <li><Kbd>↑</Kbd> / <Kbd>↓</Kbd> — scroll line by line</li>
+            <li><Kbd>PageUp</Kbd> / <Kbd>PageDown</Kbd> — scroll page by page</li>
+            <li><Kbd>Shift</Kbd>+Mouse wheel — scroll further pages (sends <Kbd>PageUp</Kbd>/<Kbd>PageDown</Kbd> again)</li>
+            <li><Kbd>q</Kbd> — exit copy mode, return to normal input</li>
+          </ul>
+        </DocItem>
+
+        <DocItem label="Copy & Paste (PuTTY-style)">
+          <ul className="mt-1 space-y-0.5 ml-4 list-none">
+            <li>Select text → automatically copied to clipboard</li>
+            <li>Right-click in terminal → pastes clipboard content</li>
+          </ul>
+        </DocItem>
       </DocSection>
 
       <DocSection title="SFTP File Browser">
