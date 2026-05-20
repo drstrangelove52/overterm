@@ -5,7 +5,7 @@ from core.config import settings
 engine = create_async_engine(
     settings.database_url,
     echo=False,
-    pool_pre_ping=True,
+    pool_pre_ping=False,
     pool_recycle=1800,   # recycle connections after 30 min (MariaDB default wait_timeout is 8h, but idle connections break over time)
     pool_size=5,
     max_overflow=10,
