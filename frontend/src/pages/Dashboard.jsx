@@ -301,10 +301,10 @@ export default function Dashboard() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("dashboard.searchPlaceholder")}
-          className={`bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 ${isMobile ? "flex-1 min-w-0" : "w-44"}`}
+          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 w-44"
         />
 
-        {!isMobile && groups.length > 0 && (
+        {groups.length > 0 && (
           <select
             value={filterGroup}
             onChange={(e) => setFilterGroup(e.target.value)}
@@ -317,38 +317,34 @@ export default function Dashboard() {
           </select>
         )}
 
-        {!isMobile && (
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500"
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500"
+        >
+          <option value="name">{t("dashboard.sortName")}</option>
+          <option value="auth">{t("dashboard.sortAuth")}</option>
+          <option value="group">{t("dashboard.sortGroup")}</option>
+        </select>
+
+        <div className="flex border border-gray-700 rounded overflow-hidden">
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`px-2.5 py-1.5 transition-colors ${view === "grid" ? "bg-cyan-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+            title={t("dashboard.viewGrid")}
           >
-            <option value="name">{t("dashboard.sortName")}</option>
-            <option value="auth">{t("dashboard.sortAuth")}</option>
-            <option value="group">{t("dashboard.sortGroup")}</option>
-          </select>
-        )}
+            <GridIcon />
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`px-2.5 py-1.5 transition-colors ${view === "list" ? "bg-cyan-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+            title={t("dashboard.viewList")}
+          >
+            <ListIcon />
+          </button>
+        </div>
 
-        {!isMobile && (
-          <div className="flex border border-gray-700 rounded overflow-hidden">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`px-2.5 py-1.5 transition-colors ${view === "grid" ? "bg-cyan-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-              title={t("dashboard.viewGrid")}
-            >
-              <GridIcon />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`px-2.5 py-1.5 transition-colors ${view === "list" ? "bg-cyan-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
-              title={t("dashboard.viewList")}
-            >
-              <ListIcon />
-            </button>
-          </div>
-        )}
-
-        {!isMobile && user?.is_admin && (
+        {user?.is_admin && (
           <button
             onClick={() => navigate("/hosts/new")}
             className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-medium transition-colors"
