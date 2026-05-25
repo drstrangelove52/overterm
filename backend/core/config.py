@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     secret_key: str = "insecure-dev-key-change-in-production"
     encryption_key: str = ""  # base64-encoded 32-byte key; generated if empty
 
+    server_name: str = ""
+
     access_token_expire_hours: int = 8
 
     first_admin_username: str = "admin"

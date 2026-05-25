@@ -28,6 +28,7 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
+      SERVER_NAME: ${HOSTNAME:-}
     depends_on:
       db:
         condition: service_healthy
