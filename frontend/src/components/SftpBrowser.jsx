@@ -350,8 +350,12 @@ function RemotePane({ hostId, sftpRoot, initialPath, stateRef, refreshRef, onOpe
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url; a.download = entry.name; a.click();
+        a.href = url; a.download = entry.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        await new Promise((r) => setTimeout(r, 200));
       } catch {}
     }
   };
@@ -478,7 +482,10 @@ function RemotePane({ hostId, sftpRoot, initialPath, stateRef, refreshRef, onOpe
                     {/* Checkbox */}
                     <td className="px-3 py-1 w-8" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={isSelected}
-                        onChange={(e) => toggleSelect(e, entry)}
+                        onChange={() => {
+                          setSelected((prev) => { const next = new Set(prev); next.has(entry.name) ? next.delete(entry.name) : next.add(entry.name); return next; });
+                          setLastSelected(entry.name);
+                        }}
                         onClick={(e) => e.stopPropagation()}
                         className="accent-cyan-500 cursor-pointer" />
                     </td>
