@@ -41,6 +41,13 @@ export default function Layout() {
   const termSendRefs = useRef({});
   const [tmuxSessions, setTmuxSessions] = useState([]);
 
+  useEffect(() => {
+    fetch("/health")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.hostname) document.title = `OverTerm - ${d.hostname}`; })
+      .catch(() => {});
+  }, []);
+
   const loadTmuxSessions = useCallback(() => {
     api.get("/sessions/active").then((r) => setTmuxSessions(r.data)).catch(() => {});
   }, []);

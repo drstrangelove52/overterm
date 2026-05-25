@@ -1,4 +1,5 @@
 import asyncio
+import socket
 import time
 import resource as _resource
 from contextlib import asynccontextmanager
@@ -186,6 +187,7 @@ async def health():
     return {
         "status": "ok" if db_ok else "degraded",
         "version": _APP_VERSION,
+        "hostname": socket.gethostname(),
         "db": "ok" if db_ok else "error",
         "active_sessions": active_ws,
         "lingering_sessions": lingering,
