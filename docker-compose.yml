@@ -28,7 +28,8 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
-      SERVER_NAME: ${HOSTNAME:-}
+    volumes:
+      - /etc/hostname:/etc/hostname:ro
     depends_on:
       db:
         condition: service_healthy

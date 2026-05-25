@@ -14,6 +14,13 @@ from sqlalchemy import select
 _START_TIME = time.monotonic()
 _APP_VERSION = "1.0.9"
 
+
+def _get_hostname() -> str:
+    try:
+        return open("/etc/hostname").read().strip()
+    except Exception:
+        return socket.gethostname()
+
 from core.config import settings
 from models.database import engine, AsyncSessionLocal, Base
 from models.models import User  # noqa: F401 – ensures all models are registered
@@ -187,7 +194,7 @@ async def health():
     return {
         "status": "ok" if db_ok else "degraded",
         "version": _APP_VERSION,
-        "hostname": settings.server_name or socket.gethostname(),
+        "hostname": settings.server_name or _get_hostname(),
         "db": "ok" if db_ok else "error",
         "active_sessions": active_ws,
         "lingering_sessions": lingering,
