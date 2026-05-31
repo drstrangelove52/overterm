@@ -259,7 +259,10 @@ export default function Layout() {
         `}
       >
         <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between shrink-0">
-          <span className="text-cyan-400 font-mono font-bold text-lg">OverTerm</span>
+          <div className="flex items-center gap-2">
+            <img src="/favicon.svg" alt="" className="w-6 h-6" />
+            <span className="text-cyan-400 font-mono font-bold text-lg">OverTerm</span>
+          </div>
           <button
             className="lg:hidden text-gray-500 hover:text-white text-xl leading-none"
             onClick={closeSidebar}
@@ -283,7 +286,10 @@ export default function Layout() {
               <path fillRule="evenodd" d="M3 5h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2z" clipRule="evenodd" />
             </svg>
           </button>
-          <span className="text-cyan-400 font-mono font-bold">OverTerm</span>
+          <div className="flex items-center gap-2">
+            <img src="/favicon.svg" alt="" className="w-5 h-5" />
+            <span className="text-cyan-400 font-mono font-bold">OverTerm</span>
+          </div>
         </div>
 
         <TabBar
