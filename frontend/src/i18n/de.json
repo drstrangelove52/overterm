@@ -67,6 +67,7 @@
     "sortName": "Sortierung: Name",
     "sortAuth": "Sortierung: Auth",
     "sortGroup": "Sortierung: Gruppe",
+    "checkStatus": "Erreichbarkeit prüfen",
     "viewGrid": "Kartenansicht",
     "viewList": "Listenansicht",
     "addHost": "+ Host hinzufügen",

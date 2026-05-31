@@ -186,16 +186,21 @@ export default function Dashboard() {
   const [filterGroup, setFilterGroup] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [hostStatus, setHostStatus] = useState({});
+  const [checking, setChecking] = useState(false);
 
   const checkStatus = useCallback((hostList) => {
-    hostList.forEach((h) => {
-      api.get(`/hosts/${h.id}/ping`).then((r) => {
-        setHostStatus((prev) => ({ ...prev, [h.id]: r.data.reachable }));
-      }).catch(() => {
-        setHostStatus((prev) => ({ ...prev, [h.id]: false }));
-      });
+    setChecking(true);
+    setHostStatus({});
+    let done = 0;
+    const list = hostList ?? hosts;
+    if (!list.length) { setChecking(false); return; }
+    list.forEach((h) => {
+      api.get(`/hosts/${h.id}/ping`)
+        .then((r) => setHostStatus((prev) => ({ ...prev, [h.id]: r.data.reachable })))
+        .catch(() => setHostStatus((prev) => ({ ...prev, [h.id]: false })))
+        .finally(() => { if (++done === list.length) setChecking(false); });
     });
-  }, []);
+  }, [hosts]);
 
   const load = useCallback(() => {
     Promise.all([
@@ -203,8 +208,8 @@ export default function Dashboard() {
       user?.is_admin
         ? api.get("/groups").then((r) => setGroups(r.data))
         : api.get("/auth/me/groups").then((r) => setGroups(r.data)),
-    ]).then(([hostList]) => checkStatus(hostList)).finally(() => setLoading(false));
-  }, [user, checkStatus]);
+    ]).finally(() => setLoading(false));
+  }, [user]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -326,6 +331,15 @@ export default function Dashboard() {
           <option value="auth">{t("dashboard.sortAuth")}</option>
           <option value="group">{t("dashboard.sortGroup")}</option>
         </select>
+
+        <button
+          onClick={() => checkStatus()}
+          disabled={checking}
+          title={t("dashboard.checkStatus")}
+          className="px-2.5 py-1.5 bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-white disabled:opacity-50 transition-colors text-sm"
+        >
+          {checking ? "⟳" : "⬤"}
+        </button>
 
         <div className="flex border border-gray-700 rounded overflow-hidden">
           <button

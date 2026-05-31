@@ -67,6 +67,7 @@
     "sortName": "Sort: Name",
     "sortAuth": "Sort: Auth",
     "sortGroup": "Sort: Group",
+    "checkStatus": "Check reachability",
     "viewGrid": "Card view",
     "viewList": "List view",
     "addHost": "+ Add host",
