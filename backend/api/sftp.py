@@ -96,6 +96,12 @@ async def download_file(
     host = await _get_host(host_id, db)
     conn, sftp = await open_sftp(host, db, user_id=current_user.id, sftp_root=root)
 
+    try:
+        stat = await sftp.stat(path)
+        file_size = stat.size
+    except Exception:
+        file_size = None
+
     async def stream():
         try:
             async with sftp.open(path, "rb") as f:
@@ -109,11 +115,10 @@ async def download_file(
             conn.close()
 
     filename = path.split("/")[-1]
-    return StreamingResponse(
-        stream(),
-        media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    if file_size is not None:
+        headers["Content-Length"] = str(file_size)
+    return StreamingResponse(stream(), media_type="application/octet-stream", headers=headers)
 
 
 @router.post("/{host_id}/upload", status_code=204)
