@@ -73,7 +73,7 @@ async def list_directory(
                 path=f"{path.rstrip('/')}/{e.filename}",
                 is_dir=is_dir,
                 size=attrs.size,
-                modified=datetime.fromtimestamp(attrs.mtime) if attrs.mtime else None,
+                modified=datetime.utcfromtimestamp(attrs.mtime).isoformat() + "Z" if attrs.mtime else None,
                 permissions=oct(attrs.permissions)[-4:] if attrs.permissions else None,
                 owner=owner,
                 group=group,

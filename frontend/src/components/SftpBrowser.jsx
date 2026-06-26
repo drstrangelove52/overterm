@@ -159,6 +159,7 @@ function LocalPane({ stateRef, refreshRef }) {
               <tr>
                 <th className="text-left px-3 py-1.5">Name</th>
                 <th className="text-right px-3 py-1.5">Größe</th>
+                <th className="text-right px-3 py-1.5 hidden md:table-cell">Geändert</th>
               </tr>
             </thead>
             <tbody>
@@ -172,6 +173,7 @@ function LocalPane({ stateRef, refreshRef }) {
                     <span className={entry.is_dir ? "text-cyan-300" : "text-gray-200"}>{entry.name}</span>
                   </td>
                   <td className="px-3 py-1 text-right text-gray-500 text-xs">{entry.is_dir ? "—" : formatSize(entry.size)}</td>
+                  <td className="px-3 py-1 text-right text-gray-500 text-xs hidden md:table-cell">{entry.is_dir ? "—" : formatDate(entry.modified)}</td>
                 </tr>
               ))}
             </tbody>
