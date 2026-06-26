@@ -25,6 +25,23 @@ function formatPerms(p) {
   return map[parseInt(oct[0])] + map[parseInt(oct[1])] + map[parseInt(oct[2])];
 }
 
+async function fetchWithProgress(url, token, onProgress) {
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(res.statusText);
+  const total = parseInt(res.headers.get("content-length") || "0", 10);
+  const reader = res.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    if (total) onProgress(Math.round((loaded / total) * 100));
+  }
+  return new Blob(chunks);
+}
+
 function SortTh({ label, col, sortCol, sortDir, onSort, className = "" }) {
   const active = sortCol === col;
   return (
@@ -272,13 +289,19 @@ function RemotePane({ hostId, sftpRoot, initialPath, stateRef, refreshRef, onOpe
   const uploadFileList = async (files) => {
     if (!files.length) return;
     const queue = Array.from(files);
-    setUploads(queue.map((f) => ({ name: f.name, done: false, error: false })));
+    setUploads(queue.map((f) => ({ name: f.name, done: false, error: false, percent: 0 })));
     for (let i = 0; i < queue.length; i++) {
       const form = new FormData();
       form.append("file", queue[i]);
       try {
-        await api.post(`/sftp/${hostId}/upload`, form, { params: { path, ...r } });
-        setUploads((prev) => prev.map((u, idx) => idx === i ? { ...u, done: true } : u));
+        await api.post(`/sftp/${hostId}/upload`, form, {
+          params: { path, ...r },
+          onUploadProgress: (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            setUploads((prev) => prev.map((u, idx) => idx === i ? { ...u, percent: pct } : u));
+          },
+        });
+        setUploads((prev) => prev.map((u, idx) => idx === i ? { ...u, done: true, percent: 100 } : u));
       } catch {
         setUploads((prev) => prev.map((u, idx) => idx === i ? { ...u, done: true, error: true } : u));
       }
@@ -347,21 +370,25 @@ function RemotePane({ hostId, sftpRoot, initialPath, stateRef, refreshRef, onOpe
     const token = JSON.parse(localStorage.getItem("overterm-auth") || "{}").state?.token;
     for (const entry of entries.filter((e) => selected.has(e.name) && !e.is_dir)) {
       try {
-        const res = await fetch(`/api/sftp/${hostId}/download?path=${encodeURIComponent(entry.path)}${sftpRoot ? "&root=true" : ""}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) continue;
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
+        const url = `/api/sftp/${hostId}/download?path=${encodeURIComponent(entry.path)}${sftpRoot ? "&root=true" : ""}`;
+        setUploads((prev) => [...prev.filter((u) => u.name !== entry.name), { name: entry.name, done: false, error: false, percent: 0 }]);
+        const blob = await fetchWithProgress(url, token, (pct) =>
+          setUploads((prev) => prev.map((u) => u.name === entry.name ? { ...u, percent: pct } : u))
+        );
+        setUploads((prev) => prev.map((u) => u.name === entry.name ? { ...u, done: true, percent: 100 } : u));
+        const objUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url; a.download = entry.name;
+        a.href = objUrl; a.download = entry.name;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(objUrl);
         await new Promise((r) => setTimeout(r, 200));
-      } catch {}
+      } catch {
+        setUploads((prev) => prev.map((u) => u.name === entry.name ? { ...u, done: true, error: true } : u));
+      }
     }
+    setTimeout(() => setUploads([]), 3000);
   };
 
   const btn = "text-xs px-2 py-0.5 rounded shrink-0 transition-colors";
@@ -417,13 +444,21 @@ function RemotePane({ hostId, sftpRoot, initialPath, stateRef, refreshRef, onOpe
 
       {/* Upload progress */}
       {uploads.length > 0 && (
-        <div className="px-3 py-1.5 bg-gray-900 border-b border-gray-700 space-y-0.5 shrink-0">
+        <div className="px-3 py-1.5 bg-gray-900 border-b border-gray-700 space-y-1 shrink-0">
           {uploads.map((u, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs">
-              <span className={u.error ? "text-red-400" : u.done ? "text-green-400" : "text-gray-400"}>
-                {u.error ? "✕" : u.done ? "✓" : "⟳"}
-              </span>
-              <span className="truncate text-gray-300">{u.name}</span>
+            <div key={i} className="text-xs">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={u.error ? "text-red-400" : u.done ? "text-green-400" : "text-gray-400"}>
+                  {u.error ? "✕" : u.done ? "✓" : "⟳"}
+                </span>
+                <span className="truncate text-gray-300 flex-1">{u.name}</span>
+                <span className="text-gray-500 shrink-0">{u.done ? "" : `${u.percent}%`}</span>
+              </div>
+              {!u.done && (
+                <div className="h-1 bg-gray-800 rounded overflow-hidden">
+                  <div className="h-full bg-cyan-500 transition-all duration-150" style={{ width: `${u.percent}%` }} />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -555,10 +590,10 @@ export default function SftpBrowser({ hostId, hostName, sftpRoot = false, initia
   const remoteRefreshRef = useRef(null);
   const [transfers, setTransfers] = useState([]);
 
-  const addTransfer = (name, direction, status) =>
+  const addTransfer = (name, direction, status, percent = 0) =>
     setTransfers((prev) => {
       const next = prev.filter((t) => !(t.name === name && t.direction === direction));
-      return [...next, { name, direction, status }];
+      return [...next, { name, direction, status, percent }];
     });
 
   const copyToRemote = async () => {
@@ -566,14 +601,20 @@ export default function SftpBrowser({ hostId, hostName, sftpRoot = false, initia
     const { path } = remoteStateRef.current;
     if (!selected?.size) return;
     for (const entry of entries.filter((e) => selected.has(e.name) && !e.is_dir)) {
-      addTransfer(entry.name, "→", "pending");
+      addTransfer(entry.name, "→", "pending", 0);
       try {
         const file = await entry.handle.getFile();
         const form = new FormData();
         form.append("file", file);
-        await api.post(`/sftp/${hostId}/upload`, form, { params: { path, ...(sftpRoot ? { root: true } : {}) } });
-        addTransfer(entry.name, "→", "done");
-      } catch { addTransfer(entry.name, "→", "error"); }
+        await api.post(`/sftp/${hostId}/upload`, form, {
+          params: { path, ...(sftpRoot ? { root: true } : {}) },
+          onUploadProgress: (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            addTransfer(entry.name, "→", "pending", pct);
+          },
+        });
+        addTransfer(entry.name, "→", "done", 100);
+      } catch { addTransfer(entry.name, "→", "error", 0); }
     }
     remoteRefreshRef.current?.();
   };
@@ -586,19 +627,16 @@ export default function SftpBrowser({ hostId, hostName, sftpRoot = false, initia
     const dirHandle = dirStack[dirStack.length - 1].handle;
     const token = JSON.parse(localStorage.getItem("overterm-auth") || "{}").state?.token;
     for (const entry of entries.filter((e) => selected.has(e.name) && !e.is_dir)) {
-      addTransfer(entry.name, "←", "pending");
+      addTransfer(entry.name, "←", "pending", 0);
       try {
-        const res = await fetch(`/api/sftp/${hostId}/download?path=${encodeURIComponent(entry.path)}${sftpRoot ? "&root=true" : ""}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(res.statusText);
-        const blob = await res.blob();
+        const url = `/api/sftp/${hostId}/download?path=${encodeURIComponent(entry.path)}${sftpRoot ? "&root=true" : ""}`;
+        const blob = await fetchWithProgress(url, token, (pct) => addTransfer(entry.name, "←", "pending", pct));
         const fh = await dirHandle.getFileHandle(entry.name, { create: true });
         const writable = await fh.createWritable();
         await writable.write(blob);
         await writable.close();
-        addTransfer(entry.name, "←", "done");
-      } catch { addTransfer(entry.name, "←", "error"); }
+        addTransfer(entry.name, "←", "done", 100);
+      } catch { addTransfer(entry.name, "←", "error", 0); }
     }
     localRefreshRef.current?.();
   };
@@ -643,17 +681,29 @@ export default function SftpBrowser({ hostId, hostName, sftpRoot = false, initia
 
       {/* Transfer status bar */}
       {transfers.length > 0 && (
-        <div className="shrink-0 border-t border-gray-700 bg-gray-900 px-3 py-1 flex items-center gap-1 flex-wrap max-h-12 overflow-auto">
+        <div className="shrink-0 border-t border-gray-700 bg-gray-900 px-3 py-2 space-y-1 max-h-32 overflow-auto">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Transfers</span>
+            <button onClick={() => setTransfers([])} className="text-gray-600 hover:text-gray-400 text-xs">✕</button>
+          </div>
           {transfers.slice(-10).map((t, i) => (
-            <span key={i} className={`text-xs flex items-center gap-1 ${
-              t.status === "error" ? "text-red-400" : t.status === "done" ? "text-green-400" : "text-gray-400"
-            }`}>
-              <span>{t.direction}</span>
-              <span className="truncate max-w-32">{t.name}</span>
-              <span>{t.status === "done" ? "✓" : t.status === "error" ? "✗" : "…"}</span>
-            </span>
+            <div key={i} className="text-xs">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={t.status === "error" ? "text-red-400" : t.status === "done" ? "text-green-400" : "text-gray-400"}>
+                  {t.direction}
+                </span>
+                <span className="truncate text-gray-300 flex-1">{t.name}</span>
+                <span className={t.status === "error" ? "text-red-400" : t.status === "done" ? "text-green-400" : "text-gray-500"}>
+                  {t.status === "done" ? "✓" : t.status === "error" ? "✗" : `${t.percent}%`}
+                </span>
+              </div>
+              {t.status === "pending" && (
+                <div className="h-1 bg-gray-800 rounded overflow-hidden">
+                  <div className="h-full bg-cyan-500 transition-all duration-150" style={{ width: `${t.percent}%` }} />
+                </div>
+              )}
+            </div>
           ))}
-          <button onClick={() => setTransfers([])} className="ml-auto text-gray-600 hover:text-gray-400 text-xs">✕</button>
         </div>
       )}
     </div>
