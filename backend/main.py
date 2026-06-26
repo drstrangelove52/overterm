@@ -12,7 +12,7 @@ from passlib.context import CryptContext
 from sqlalchemy import select
 
 _START_TIME = time.monotonic()
-_APP_VERSION = "1.0.9"
+_APP_VERSION = "1.1.0"
 
 
 def _get_hostname() -> str:
