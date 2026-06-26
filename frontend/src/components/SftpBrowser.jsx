@@ -76,7 +76,11 @@ function LocalPane({ stateRef, refreshRef }) {
       const stack = [{ name: handle.name, handle }];
       setDirStack(stack);
       await readEntries(handle);
-    } catch (e) { if (e.name !== "AbortError") setError("Zugriff verweigert oder abgebrochen"); }
+    } catch (e) {
+      if (e.name === "AbortError") return;
+      if (e.name === "SecurityError") setError("Systemordner können nicht geöffnet werden. Bitte einen eigenen Ordner (z. B. Dokumente, Desktop) wählen.");
+      else setError("Zugriff verweigert oder abgebrochen");
+    }
   };
 
   const navigate = async (entry) => {
