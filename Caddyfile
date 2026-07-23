@@ -1,0 +1,12 @@
+{
+	default_sni {$LAN_IP}
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}
+
+https://{$LAN_IP} {
+    tls internal
+    reverse_proxy frontend:80
+}

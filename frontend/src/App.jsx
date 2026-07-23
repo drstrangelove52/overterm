@@ -17,16 +17,16 @@ import Profile from "./pages/Profile";
 import About from "./pages/About";
 
 function ProtectedRoute({ children, adminOnly = false }) {
-  const { token, user } = useAuth();
-  if (!token) return <Navigate to="/login" replace />;
+  const { loggedIn, user } = useAuth();
+  if (!loggedIn) return <Navigate to="/login" replace />;
   if (adminOnly && user && !user.is_admin) return <Navigate to="/" replace />;
   return children;
 }
 
 export default function App() {
-  const { token, user, refreshUser } = useAuth();
+  const { loggedIn, user, refreshUser } = useAuth();
   useEffect(() => {
-    if (token && !user) refreshUser();
+    if (loggedIn && !user) refreshUser();
   }, []);
 
   return (

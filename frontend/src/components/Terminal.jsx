@@ -153,7 +153,7 @@ function QuickBar({ commands, wsRef, broadcastInputRef }) {
   );
 }
 
-export default function Terminal({ hostId, token, tabId, initialSessionKey, initialTmuxName, tmuxResume, onSessionKey, onClose, initialCommand, onRegisterSend, onBroadcastInput, onOpenSftp, onOpenSftpRoot }) {
+export default function Terminal({ hostId, tabId, initialSessionKey, initialTmuxName, tmuxResume, onSessionKey, onClose, initialCommand, onRegisterSend, onBroadcastInput, onOpenSftp, onOpenSftpRoot }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const wsRef = useRef(null);
@@ -315,16 +315,18 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       setHostKeyAlert(null);
 
       const proto = window.location.protocol === "https:" ? "wss" : "ws";
-      let params = `token=${encodeURIComponent(token)}`;
+      let params = "";
       if (resumeKey) {
-        params += `&resume=${encodeURIComponent(resumeKey)}`;
+        params += `resume=${encodeURIComponent(resumeKey)}`;
         // Also pass tmux_name so backend can re-attach if ManagedSession expired
         if (tmuxNameRef.current) params += `&tmux_resume=${encodeURIComponent(tmuxNameRef.current)}`;
       } else if (tmuxResume) {
-        params += `&tmux_resume=${encodeURIComponent(tmuxResume)}`;
+        params += `tmux_resume=${encodeURIComponent(tmuxResume)}`;
       }
+      // Auth is via the httpOnly session cookie, sent automatically by the
+      // browser on the WS handshake (same-origin) — no token in the URL.
       const ws = new WebSocket(
-        `${proto}://${window.location.host}/ws/ssh/${hostId}?${params}`
+        `${proto}://${window.location.host}/ws/ssh/${hostId}${params ? `?${params}` : ""}`
       );
       wsRef.current = ws;
 
@@ -405,7 +407,7 @@ export default function Terminal({ hostId, token, tabId, initialSessionKey, init
       wsRef.current?.close();
       term.dispose();
     };
-  }, [hostId, token]);
+  }, [hostId]);
 
   return (
     <div className="flex flex-col h-full bg-black relative">

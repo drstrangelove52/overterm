@@ -11,8 +11,6 @@ class LoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    access_token: str | None = None
-    token_type: str = "bearer"
     requires_totp: bool = False
     partial_token: str | None = None
 

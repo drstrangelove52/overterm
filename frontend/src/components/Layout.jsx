@@ -31,7 +31,6 @@ function NavItem({ to, icon, label, end, onClick, forceInactive }) {
 export default function Layout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
-  const { token } = useAuth();
   const { tabs, activeId, setActive, openTab, closeTab, clearTabs, setSessionKey } = useTabs();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -102,7 +101,7 @@ export default function Layout() {
     }
   }, [sshTabs.length, broadcastMode]);
 
-  const handleLogout = () => { clearTabs(); logout(); navigate("/login"); };
+  const handleLogout = async () => { clearTabs(); await logout(); navigate("/login"); };
 
   const closeSidebar = () => setSidebarOpen(false);
   const handleNavClick = () => { setActive(null); closeSidebar(); };
@@ -313,7 +312,6 @@ export default function Layout() {
               {tab.mode === "ssh" ? (
                 <Terminal
                   hostId={tab.hostId}
-                  token={token}
                   tabId={tab.id}
                   initialSessionKey={tab.sessionKey}
                   initialTmuxName={tab.tmuxName}

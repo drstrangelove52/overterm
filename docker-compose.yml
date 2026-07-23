@@ -37,31 +37,25 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN:-}
-    volumes:
-      - ssl_certs:/etc/nginx/ssl
-      - certbot_www:/var/www/certbot
-      - certbot_certs:/etc/letsencrypt
     depends_on:
       - backend
 
-  certbot:
-    image: certbot/certbot
+  caddy:
+    image: caddy:2-alpine
     restart: unless-stopped
+    environment:
+      LAN_IP: ${LAN_IP}
+    ports:
+      - "${LAN_IP}:80:80"
+      - "${LAN_IP}:443:443"
     volumes:
-      - certbot_www:/var/www/certbot
-      - certbot_certs:/etc/letsencrypt
-    # Renews every 12 h; exits cleanly if no certs yet or renewal not due
-    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'
-    profiles:
-      - letsencrypt
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
 
 volumes:
   db_data:
-  ssl_certs:
-  certbot_www:
-  certbot_certs:
+  caddy_data:
+  caddy_config:

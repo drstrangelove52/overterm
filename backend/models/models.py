@@ -224,6 +224,25 @@ class AppSettings(Base):
     sync_interval_minutes: Mapped[int] = mapped_column(Integer, default=360)
 
 
+class AuthSession(Base):
+    """Login session backing the httpOnly session cookie (replaces JWT)."""
+    __tablename__ = "auth_sessions"
+
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class TotpPending(Base):
+    """Short-lived token issued after password check, before TOTP verification."""
+    __tablename__ = "totp_pending"
+
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class QuickCommand(Base):
     __tablename__ = "quick_commands"
 

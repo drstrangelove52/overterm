@@ -2,15 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete as sa_delete
 from sqlalchemy.orm import selectinload
-from passlib.context import CryptContext
 
 from models.database import get_db
 from models.models import User, UserGroup
 from models.schemas import UserCreate, UserUpdate, UserOut
 from auth.dependencies import require_admin
+from auth.password import hash_password
 
 router = APIRouter(prefix="/users", tags=["users"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def _user_query():
@@ -49,7 +48,7 @@ async def create_user(body: UserCreate, db: AsyncSession = Depends(get_db), _=De
     user = User(
         username=body.username,
         email=body.email,
-        password_hash=pwd_context.hash(body.password),
+        password_hash=hash_password(body.password),
         is_admin=body.is_admin,
         is_active=body.is_active,
     )
@@ -84,7 +83,7 @@ async def update_user(user_id: int, body: UserUpdate, db: AsyncSession = Depends
     if body.is_active is not None:
         user.is_active = body.is_active
     if body.password is not None:
-        user.password_hash = pwd_context.hash(body.password)
+        user.password_hash = hash_password(body.password)
     if body.group_ids is not None:
         await _sync_groups(db, user_id, body.group_ids)
     await db.commit()

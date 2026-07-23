@@ -25,8 +25,8 @@ function formatPerms(p) {
   return map[parseInt(oct[0])] + map[parseInt(oct[1])] + map[parseInt(oct[2])];
 }
 
-async function fetchWithProgress(url, token, onProgress) {
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+async function fetchWithProgress(url, onProgress) {
+  const res = await fetch(url); // same-origin: session cookie sent automatically
   if (!res.ok) throw new Error(res.statusText);
   const total = parseInt(res.headers.get("content-length") || "0", 10);
   const reader = res.body.getReader();
@@ -369,12 +369,11 @@ function RemotePane({ hostId, sftpRoot, initialPath, stateRef, refreshRef, onOpe
 
   // Download selected files to browser
   const downloadSelected = async () => {
-    const token = JSON.parse(localStorage.getItem("overterm-auth") || "{}").state?.token;
     for (const entry of entries.filter((e) => selected.has(e.name) && !e.is_dir)) {
       try {
         const url = `/api/sftp/${hostId}/download?path=${encodeURIComponent(entry.path)}${sftpRoot ? "&root=true" : ""}`;
         setUploads((prev) => [...prev.filter((u) => u.name !== entry.name), { name: entry.name, done: false, error: false, percent: 0 }]);
-        const blob = await fetchWithProgress(url, token, (pct) =>
+        const blob = await fetchWithProgress(url, (pct) =>
           setUploads((prev) => prev.map((u) => u.name === entry.name ? { ...u, percent: pct } : u))
         );
         setUploads((prev) => prev.map((u) => u.name === entry.name ? { ...u, done: true, percent: 100 } : u));
@@ -627,12 +626,11 @@ export default function SftpBrowser({ hostId, hostName, sftpRoot = false, initia
     if (!selected?.size) return;
     if (!dirStack?.length) { alert("Bitte zuerst einen lokalen Ordner öffnen."); return; }
     const dirHandle = dirStack[dirStack.length - 1].handle;
-    const token = JSON.parse(localStorage.getItem("overterm-auth") || "{}").state?.token;
     for (const entry of entries.filter((e) => selected.has(e.name) && !e.is_dir)) {
       addTransfer(entry.name, "←", "pending", 0);
       try {
         const url = `/api/sftp/${hostId}/download?path=${encodeURIComponent(entry.path)}${sftpRoot ? "&root=true" : ""}`;
-        const blob = await fetchWithProgress(url, token, (pct) => addTransfer(entry.name, "←", "pending", pct));
+        const blob = await fetchWithProgress(url, (pct) => addTransfer(entry.name, "←", "pending", pct));
         const fh = await dirHandle.getFileHandle(entry.name, { create: true });
         const writable = await fh.createWritable();
         await writable.write(blob);

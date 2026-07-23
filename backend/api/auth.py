@@ -5,13 +5,13 @@ import secrets
 import pyotp
 import qrcode
 import qrcode.image.svg
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from passlib.context import CryptContext
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from core.config import settings
 from models.database import get_db
 from models.models import User, UserGroup, Group
 from models.schemas import (
@@ -19,11 +19,11 @@ from models.schemas import (
     TotpVerifyRequest, TotpEnableRequest, TotpDisableRequest,
     TotpSetupResponse, TotpStatusResponse, TotpRegenerateCodesResponse, ProfileUpdateRequest,
 )
-from auth.jwt import create_access_token, create_partial_token, decode_partial_token
-from auth.dependencies import get_current_user
+from auth.password import hash_password, verify_password, verify_and_upgrade
+from auth.session import create_session, delete_session, create_totp_pending, consume_totp_pending
+from auth.dependencies import SESSION_COOKIE_NAME, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 limiter = Limiter(key_func=get_remote_address)
 
 RECOVERY_CODE_COUNT = 8
@@ -60,24 +60,55 @@ def _make_qr_svg(uri: str) -> str:
     return buf.getvalue().decode()
 
 
+def _set_session_cookie(response: Response, token: str, max_age: int) -> None:
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        max_age=max_age,
+        httponly=True,
+        secure=settings.session_cookie_secure,
+        samesite="lax",
+    )
+
+
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
-async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == body.username))
     user = result.scalar_one_or_none()
-    if not user or not pwd_context.verify(body.password, user.password_hash):
+    if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    valid, new_hash = verify_and_upgrade(body.password, user.password_hash)
+    if not valid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if new_hash:
+        user.password_hash = new_hash
+        await db.commit()
+
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
     if user.totp_enabled:
-        return TokenResponse(requires_totp=True, partial_token=create_partial_token(user.id))
-    token = create_access_token(user.id, user.username, user.is_admin)
-    return TokenResponse(access_token=token)
+        partial_token = await create_totp_pending(db, user.id)
+        return TokenResponse(requires_totp=True, partial_token=partial_token)
+
+    token, max_age = await create_session(db, user.id)
+    _set_session_cookie(response, token, max_age)
+    return TokenResponse()
+
+
+@router.post("/logout")
+async def logout(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token:
+        await delete_session(db, token)
+    response.delete_cookie(SESSION_COOKIE_NAME)
+    return {"detail": "ok"}
 
 
 @router.post("/totp/verify", response_model=TokenResponse)
-async def totp_verify(body: TotpVerifyRequest, db: AsyncSession = Depends(get_db)):
-    user_id = decode_partial_token(body.partial_token)
+async def totp_verify(response: Response, body: TotpVerifyRequest, db: AsyncSession = Depends(get_db)):
+    user_id = await consume_totp_pending(db, body.partial_token)
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
     result = await db.execute(select(User).where(User.id == user_id))
@@ -86,18 +117,22 @@ async def totp_verify(body: TotpVerifyRequest, db: AsyncSession = Depends(get_db
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid request")
 
     # Try TOTP code first
-    if pyotp.TOTP(user.totp_secret).verify(body.code, valid_window=1):
-        return TokenResponse(access_token=create_access_token(user.id, user.username, user.is_admin))
+    valid = pyotp.TOTP(user.totp_secret).verify(body.code, valid_window=1)
 
     # Try recovery code
-    if user.totp_recovery_codes:
+    if not valid and user.totp_recovery_codes:
         updated = _consume_recovery_code(body.code, user.totp_recovery_codes)
         if updated is not None:
             user.totp_recovery_codes = updated
             await db.commit()
-            return TokenResponse(access_token=create_access_token(user.id, user.username, user.is_admin))
+            valid = True
 
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiger Code")
+    if not valid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiger Code")
+
+    token, max_age = await create_session(db, user.id)
+    _set_session_cookie(response, token, max_age)
+    return TokenResponse()
 
 
 @router.get("/totp/status", response_model=TotpStatusResponse)
@@ -139,7 +174,7 @@ async def totp_disable(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not pwd_context.verify(body.password, current_user.password_hash):
+    if not verify_password(body.password, current_user.password_hash):
         raise HTTPException(400, "Falsches Passwort")
     current_user.totp_secret = None
     current_user.totp_enabled = False
@@ -155,7 +190,7 @@ async def regenerate_recovery_codes(
 ):
     if not current_user.totp_enabled:
         raise HTTPException(400, "2FA ist nicht aktiv")
-    if not pwd_context.verify(body.password, current_user.password_hash):
+    if not verify_password(body.password, current_user.password_hash):
         raise HTTPException(400, "Falsches Passwort")
     plain_codes, hashed_codes = _generate_recovery_codes()
     current_user.totp_recovery_codes = json.dumps(hashed_codes)
@@ -207,7 +242,7 @@ async def change_password(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not pwd_context.verify(body.current_password, current_user.password_hash):
+    if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Current password incorrect")
-    current_user.password_hash = pwd_context.hash(body.new_password)
+    current_user.password_hash = hash_password(body.new_password)
     await db.commit()

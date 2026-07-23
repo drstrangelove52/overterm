@@ -13,18 +13,21 @@ logger = logging.getLogger("terminal")
 
 from models.database import AsyncSessionLocal
 from models.models import Host, Session as SessionModel, KnownHost, SessionRecording
-from auth.jwt import decode_token
+from auth.dependencies import SESSION_COOKIE_NAME
+from auth.session import validate_session
 from core.ssh_manager import SshShellSession
 from core import session_manager
 
 router = APIRouter(tags=["terminal"])
 
 
-async def _get_host_and_user(token: str, host_id: int, db: AsyncSession):
-    payload = decode_token(token)
-    if not payload:
+async def _get_host_and_user(websocket: WebSocket, host_id: int, db: AsyncSession):
+    token = websocket.cookies.get(SESSION_COOKIE_NAME)
+    if not token:
         return None, None
-    user_id = int(payload["sub"])
+    user_id = await validate_session(db, token)
+    if not user_id:
+        return None, None
     result = await db.execute(
         select(Host).options(selectinload(Host.host_keys)).where(Host.id == host_id)
     )
@@ -82,7 +85,6 @@ async def _save_session_end(session_db_id: int, recording: list):
 async def ssh_terminal(
     websocket: WebSocket,
     host_id: int,
-    token: str = Query(...),
     resume: str | None = Query(None),
     tmux_resume: str | None = Query(None),
 ):
@@ -95,7 +97,7 @@ async def ssh_terminal(
     )
 
     async with AsyncSessionLocal() as db:
-        user_id, host = await _get_host_and_user(token, host_id, db)
+        user_id, host = await _get_host_and_user(websocket, host_id, db)
         if not host or not user_id:
             await websocket.send_text(json.dumps({"type": "error", "data": "Unauthorized"}))
             await websocket.close()

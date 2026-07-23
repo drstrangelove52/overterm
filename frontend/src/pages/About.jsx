@@ -24,7 +24,7 @@ const BACKEND = [
   { name: "aiomysql",            version: "0.2",   license: "MIT",                        roleKey: "about.roles.mysqlDriver" },
   { name: "Pydantic",            version: "2.10",  license: "MIT",                        roleKey: "about.roles.validation" },
   { name: "asyncssh",            version: "2.18",  license: "EPL-2.0",                    roleKey: "about.roles.sshProtocol" },
-  { name: "python-jose",         version: "3.3",   license: "MIT",                        roleKey: "about.roles.jwt" },
+  { name: "argon2-cffi",         version: "23.1",  license: "MIT",                        roleKey: "about.roles.argon2" },
   { name: "passlib",             version: "1.7",   license: "BSD-3-Clause",               roleKey: "about.roles.passwordHashing" },
   { name: "bcrypt",              version: "4.0",   license: "Apache-2.0",                 roleKey: "about.roles.bcrypt" },
   { name: "cryptography",        version: "43.0",  license: "Apache-2.0 / BSD-3-Clause",  roleKey: "about.roles.encryption" },
@@ -300,7 +300,7 @@ function DocsTabDe() {
         <p>OverTerm stellt eine vollständige REST-API bereit. Die interaktive Dokumentation ist direkt über den Browser erreichbar:</p>
         <DocItem label="Swagger UI"><code className="text-cyan-400 font-mono text-xs">/docs</code> — interaktive API-Dokumentation mit der Möglichkeit, Endpoints direkt auszuprobieren.</DocItem>
         <DocItem label="ReDoc"><code className="text-cyan-400 font-mono text-xs">/redoc</code> — lesbare API-Referenz im ReDoc-Format.</DocItem>
-        <DocItem label="Authentifizierung">Alle API-Endpoints (ausser <code className="text-cyan-400 font-mono text-xs">/auth/login</code>) erfordern einen JWT-Bearer-Token. Token wird via <code className="text-cyan-400 font-mono text-xs">POST /auth/login</code> mit Benutzername und Passwort bezogen und als <code className="text-cyan-400 font-mono text-xs">Authorization: Bearer &lt;token&gt;</code> Header mitgeschickt.</DocItem>
+        <DocItem label="Authentifizierung">Alle API-Endpoints (ausser <code className="text-cyan-400 font-mono text-xs">/auth/login</code>) erfordern ein gültiges Session-Cookie. Es wird via <code className="text-cyan-400 font-mono text-xs">POST /auth/login</code> mit Benutzername und Passwort gesetzt (httpOnly, vom Browser automatisch mitgeschickt) und mit <code className="text-cyan-400 font-mono text-xs">POST /auth/logout</code> serverseitig invalidiert.</DocItem>
         <DocItem label="Wichtige Endpoints">
           <ul className="mt-1 space-y-0.5 ml-0 list-none font-mono text-xs">
             <li><code className="text-cyan-400">GET  /hosts</code> <span className="text-gray-400 font-sans"> — Host-Liste</span></li>
@@ -468,7 +468,7 @@ function DocsTabEn() {
         <p>OverTerm provides a complete REST API. Interactive documentation is accessible directly via browser:</p>
         <DocItem label="Swagger UI"><code className="text-cyan-400 font-mono text-xs">/docs</code> — interactive API documentation with the ability to test endpoints directly.</DocItem>
         <DocItem label="ReDoc"><code className="text-cyan-400 font-mono text-xs">/redoc</code> — readable API reference in ReDoc format.</DocItem>
-        <DocItem label="Authentication">All API endpoints (except <code className="text-cyan-400 font-mono text-xs">/auth/login</code>) require a JWT Bearer token. Token is obtained via <code className="text-cyan-400 font-mono text-xs">POST /auth/login</code> with username and password and sent as <code className="text-cyan-400 font-mono text-xs">Authorization: Bearer &lt;token&gt;</code> header.</DocItem>
+        <DocItem label="Authentication">All API endpoints (except <code className="text-cyan-400 font-mono text-xs">/auth/login</code>) require a valid session cookie. It is set via <code className="text-cyan-400 font-mono text-xs">POST /auth/login</code> with username and password (httpOnly, sent automatically by the browser) and invalidated server-side via <code className="text-cyan-400 font-mono text-xs">POST /auth/logout</code>.</DocItem>
         <DocItem label="Key endpoints">
           <ul className="mt-1 space-y-0.5 ml-0 list-none font-mono text-xs">
             <li><code className="text-cyan-400">GET  /hosts</code> <span className="text-gray-400 font-sans"> — host list</span></li>

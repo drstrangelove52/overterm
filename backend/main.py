@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from passlib.context import CryptContext
 from sqlalchemy import select
 
 _START_TIME = time.monotonic()
@@ -40,8 +39,7 @@ from api.proxmox import router as proxmox_router
 from api.admin import router as admin_router
 from api.quick_commands import router as quick_commands_router
 from core import sync_scheduler
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from auth.password import hash_password
 
 
 async def _create_initial_admin():
@@ -52,7 +50,7 @@ async def _create_initial_admin():
         admin = User(
             username=settings.first_admin_username,
             email=settings.first_admin_email,
-            password_hash=pwd_context.hash(settings.first_admin_password),
+            password_hash=hash_password(settings.first_admin_password),
             is_admin=True,
             is_active=True,
         )

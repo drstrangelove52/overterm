@@ -9,12 +9,18 @@ class Settings(BaseSettings):
     db_password: str = "changeme"
     db_name: str = "overterm"
 
+    # No longer used for token signing (session cookies replaced JWT) — kept
+    # because core/crypto.py falls back to deriving the encryption key from
+    # this value when encryption_key is empty. Never remove/rotate without
+    # checking that fallback, or existing encrypted credentials become
+    # unreadable.
     secret_key: str = "insecure-dev-key-change-in-production"
     encryption_key: str = ""  # base64-encoded 32-byte key; generated if empty
 
     server_name: str = ""
 
-    access_token_expire_hours: int = 8
+    access_token_expire_hours: int = 8  # session cookie lifetime
+    session_cookie_secure: bool = True  # set false only for local dev outside Docker (plain HTTP)
 
     first_admin_username: str = "admin"
     first_admin_password: str = "changeme"
